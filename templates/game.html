@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="game-container">
+    <div class="game-info">
+        <h2>Jugando contra {{ bot.name }}</h2>
+        <div class="timer">
+            <div id="player-timer"></div>
+            <div id="bot-timer"></div>
+        </div>
+    </div>
+    <div id="board"></div>
+    <div class="game-controls">
+        <button id="resign">Abandonar</button>
+        <button id="draw">Ofrecer Tablas</button>
+    </div>
+</div>
+<script>
+    const botName = "{{ bot.name }}";
+    const gameMode = "{{ mode }}";
+    const timeLimit = {{ modes[mode].time * 60 }};
+</script>
+<script src="{{ url_for('static', filename='js/game.js') }}"></script>
+{% endblock %}

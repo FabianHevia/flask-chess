@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h1>Chess App</h1>
+    <div class="game-modes">
+        {% for bot_id, bot in bots.items() %}
+        <div class="bot-card">
+            <h2>{{ bot.name }} (ELO: {{ bot.elo }})</h2>
+            <div class="mode-buttons">
+                {% for mode_id, mode in modes.items() %}
+                <a href="{{ url_for('game', bot_name=bot_id, mode=mode_id) }}" 
+                   class="button">
+                    {{ mode.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
