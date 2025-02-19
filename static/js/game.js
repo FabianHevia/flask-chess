@@ -81,23 +81,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 promotion: move.length === 5 ? move.substring(4, 5) : undefined
             });
         } else {
-            // Si es un objeto (movimiento del jugador), usarlo directamente
             moveResult = game.move(move);
         }
         
-        if (moveResult === null) {
-            console.error("Movimiento inválido:", move);
-            return false;
-        }
+        if (moveResult === null) return false;
         
-        console.log("Movimiento realizado:", moveResult);
-        board.position(game.fen(), true); // true para animar el movimiento
+        // Animación más suave
+        board.position(game.fen(), true);
         
         if (game.game_over()) {
             clearInterval(playerInterval);
             clearInterval(botInterval);
             if (game.in_checkmate()) {
-                alert(isPlayerTurn ? '¡Jaque mate! Has perdido.' : '¡Jaque mate! Has ganado.');
+                alert(isPlayerTurn ? '¡Jaque mate! Has ganado.' : '¡Jaque mate! Has perdido.');
             } else if (game.in_draw()) {
                 alert('¡Tablas!');
             }
@@ -110,11 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
         startTimer();
         
         if (!isPlayerTurn) {
-            // Turno del bot
+            // "Pensando" indicador
+            const statusEl = document.createElement('div');
+            statusEl.className = 'thinking-status';
+            statusEl.textContent = `${botName} está pensando...`;
+            document.querySelector('.game-info').appendChild(statusEl);
+            
+            // Turno del bot con delay aleatorio mínimo
             setTimeout(() => {
-                console.log("Requesting bot move with FEN:", game.fen());
-                console.log("Bot name:", botName.toLowerCase());
-                
                 fetch('/move', {
                     method: 'POST',
                     headers: {
@@ -125,24 +124,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         bot: botName.toLowerCase()
                     })
                 })
-                .then(response => {
-                    console.log("Bot response:", response);
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    console.log("Bot move data:", data);
-                    makeMove(data.move); // El bot devuelve el movimiento en formato UCI (ej: "e2e4")
+                    // Remover el indicador de "pensando"
+                    statusEl.remove();
+                    makeMove(data.move);
                 })
                 .catch(error => {
                     console.error("Error getting bot move:", error);
-                    isPlayerTurn = true; // Devolver el turno al jugador si hay error
+                    statusEl.remove();
+                    isPlayerTurn = true;
                 });
-            }, 500);
+            }, 500); // Delay mínimo para la interfaz
         }
         
         return true;
     }
-    
+
     function onDrop(source, target) {
         const move = {
             from: source,
