@@ -145,46 +145,79 @@ class ElenaBot(BaseBot):
         except:
             return False
         
+    def minimax(self, board, depth, maximizing_player):
+        """
+        Implementación del algoritmo Minimax.
+        :param board: Estado actual del tablero.
+        :param depth: Profundidad restante para explorar.
+        :param maximizing_player: True si es el turno del jugador maximizador (nosotros), False si es el oponente.
+        :return: La mejor puntuación y el mejor movimiento.
+        """
+        if depth == 0 or board.is_game_over():
+            return self.evaluate_position(board), None
+
+        legal_moves = list(board.legal_moves)
+        best_move = None
+
+        if maximizing_player:
+            max_eval = float('-inf')
+            for move in legal_moves:
+                board.push(move)
+                eval_score, _ = self.minimax(board, depth - 1, False)
+                board.pop()
+                if eval_score > max_eval:
+                    max_eval = eval_score
+                    best_move = move
+            return max_eval, best_move
+        else:
+            min_eval = float('inf')
+            for move in legal_moves:
+                board.push(move)
+                eval_score, _ = self.minimax(board, depth - 1, True)
+                board.pop()
+                if eval_score < min_eval:
+                    min_eval = eval_score
+                    best_move = move
+            return min_eval, best_move
+
+    def get_move(self, board):
+        """
+        Obtiene el mejor movimiento usando Minimax.
+        """
+        # Usar el tiempo de pensamiento de la clase base
+        time.sleep(self.think_time())
+
+        # Intentar jugada de apertura
+        opening_move = self.get_opening_move(board)
+        if opening_move and opening_move in board.legal_moves:
+            return opening_move
+
+        # Aplicar Minimax para encontrar el mejor movimiento
+        _, best_move = self.minimax(board, depth=3, maximizing_player=board.turn)
+        return best_move or random.choice(list(board.legal_moves))
+
     def evaluate_position(self, board):
-        """Evalúa la posición actual del tablero"""
+        """
+        Evalúa la posición actual del tablero.
+        """
         if board.is_checkmate():
             return -20000 if board.turn else 20000
-        
+
         score = 0
-        
+
         # Evaluar material y posición
         for square in chess.SQUARES:
             piece = board.piece_at(square)
             if piece is not None:  # Verificamos que la pieza existe
                 value = self.piece_values[piece.piece_type]
-                
-                # Bonificaciones posicionales
+
+                # Bonificaciones posicionales (puedes ajustar esto)
                 if piece.piece_type == chess.PAWN:
-                    if 8 <= square <= 55:  # Peones centrales
+                    if square in [chess.D4, chess.E4, chess.D5, chess.E5]:  # Control del centro
                         value += 20
-                elif piece.piece_type == chess.KNIGHT:
-                    if square in [chess.A1, chess.H1, chess.A8, chess.H8]:  # Caballos en las esquinas
-                        value -= 50
-                    if 18 <= square <= 45:  # Caballos en el centro
-                        value += 30
-                elif piece.piece_type == chess.BISHOP:
-                    mobility = len([move for move in board.legal_moves if move.from_square == square])
-                    value += mobility * 5
-                elif piece.piece_type == chess.ROOK:
-                    # Penalizar movimientos tempranos de torre
-                    if len(board.move_stack) < 20:
-                        file = chess.square_file(square)
-                        pawns_in_file = 0
-                        for rank in range(8):
-                            s = chess.square(file, rank)
-                            p = board.piece_at(s)
-                            if p and p.piece_type == chess.PAWN and p.color == piece.color:
-                                pawns_in_file += 1
-                        if pawns_in_file > 0:  # Si hay peones en la columna
-                            value -= 50
-                
+
                 score += value if piece.color else -value
-        
+
         # Control del centro
         central_squares = [chess.D4, chess.E4, chess.D5, chess.E5]
         for square in central_squares:
@@ -192,18 +225,7 @@ class ElenaBot(BaseBot):
                 score += 10
             if board.is_attacked_by(chess.BLACK, square):
                 score -= 10
-        
-        # Desarrollo en apertura
-        if len(board.move_stack) < 20:
-            for square in chess.SQUARES:
-                piece = board.piece_at(square)
-                if piece:
-                    if piece.piece_type in [chess.KNIGHT, chess.BISHOP]:
-                        if piece.color and square > chess.H2:
-                            score += 20
-                        elif not piece.color and square < chess.A7:
-                            score -= 20
-        
+
         return score if board.turn else -score
 
     def get_move(self, board):
