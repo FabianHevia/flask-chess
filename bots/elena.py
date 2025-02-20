@@ -28,9 +28,14 @@ class ElenaBot(BaseBot):
                     "d2d4": ["c5d4"],                   # Captura obligada
                 },
                 "anti_theory": {
-                    "f2f4": ["e7e6"],      # Contra Grand Prix
-                    "b2b4": ["c5b4"],      # Contra Wing Gambit
-                    "c2c4": ["b8c6"]       # Contra c4
+                    "f2f4": ["e7e6"],                  # Contra Grand Prix
+                    "b2b4": ["c5b4"],                  # Contra Wing Gambit
+                    "c2c4": ["b8c6"]                   # Contra c4
+                },
+                "follow_up": {
+                    "d2d4 c5d4": ["c3d4"],             # Recaptura con Cc3
+                    "g1f3 d7d6": ["f1b5"],             # Alfil a b5 (Siciliana Rossolimo)
+                    "b1c3 e7e6": ["f1c4"],             # Alfil a c4 (Siciliana Clásica)
                 }
             },
             # Caro-Kann
@@ -42,9 +47,14 @@ class ElenaBot(BaseBot):
                     "d2d3": ["d7d5"]
                 },
                 "follow_up": {
-                    "e4e5": ["c8f5"],      # Contra Advance
-                    "e4d5": ["c6d5"],      # Captura obligada
-                    "b1d2": ["d7d5"]       # Contra Two Knights
+                    "e4e5": ["c8f5"],                  # Contra Advance
+                    "e4d5": ["c6d5"],                  # Captura obligada
+                    "b1d2": ["d7d5"],                  # Contra Two Knights
+                    "c1f4": ["g8f6"],                  # Desarrollo del caballo
+                },
+                "anti_theory": {
+                    "e4e6": ["d7d5"],                  # Contra Exchange Variation
+                    "b1d2": ["g8f6"],                  # Desarrollo del caballo
                 }
             },
             # Francesa
@@ -56,23 +66,32 @@ class ElenaBot(BaseBot):
                     "e4e5": ["c7c5"]
                 },
                 "anti_theory": {
-                    "b1c3": ["d7d5"],     # Contra Nc3
-                    "e4d5": ["e6d5"]      # Captura obligada
+                    "b1c3": ["d7d5"],                  # Contra Nc3
+                    "e4d5": ["e6d5"],                  # Captura obligada
+                },
+                "follow_up": {
+                    "e4e5 c7c5": ["f1b5"],             # Alfil a b5 (Tarrasch)
+                    "b1c3 g8f6": ["f1d3"],             # Alfil a d3
+                    "e4e5 f8b4": ["c1d2"],             # Alfil a d2
                 }
             },
-            
             # Respuestas a 1.d4
             "d2d4": {
                 # India de Rey
                 "mainline": ["g8f6"],
                 "responses": {
-                    "c2c4": ["g7g6"],      # Setup India de Rey
-                    "g1f3": ["g7g6"],      # Transposición
-                    "b1c3": ["g7g6"]       # Transposición
+                    "c2c4": ["g7g6"],                  # Setup India de Rey
+                    "g1f3": ["g7g6"],                  # Transposición
+                    "b1c3": ["g7g6"]                   # Transposición
                 },
                 "follow_up": {
-                    "g1f3 g7g6": ["f8g7"], # Fianchetto
-                    "c2c4 g7g6": ["f8g7"]  # Fianchetto
+                    "g1f3 g7g6": ["f8g7"],             # Fianchetto
+                    "c2c4 g7g6": ["f8g7"],             # Fianchetto
+                    "f1g2": ["f8g7"],                  # Alfil a g2
+                },
+                "anti_theory": {
+                    "c4c5": ["f6e4"],                  # Caballo a e4
+                    "e2e4": ["d7d6"],                  # Contra King's Indian Attack
                 }
             },
             # Nimzoindia
@@ -80,12 +99,53 @@ class ElenaBot(BaseBot):
                 "mainline": ["g8f6"],
                 "responses": {
                     "c2c4": ["e7e6"],
-                    "b1c3": ["f8b4"],
+                    "b1c3": ["f8b4"],                  # Pin al caballo
                     "g1f3": ["e7e6"]
                 },
                 "follow_up": {
-                    "c2c4 e7e6": ["f8b4"], # Setup Nimzoindia
-                    "e2e3": ["c7c5"]       # Break central
+                    "c2c4 e7e6": ["f8b4"],              # Setup Nimzoindia
+                    "e2e3": ["c7c5"],                   # Break central
+                    "f1d3": ["b8c6"],                   # Desarrollo del caballo
+                },
+                "anti_theory": {
+                    "c4c5": ["f6e4"],                   # Caballo a e4
+                    "b1d2": ["e7e6"],                   # Contra desarrollo alternativo
+                }
+            },
+            # Grünfeld
+            "alternative_grunfeld": {
+                "mainline": ["g8f6"],
+                "responses": {
+                    "c2c4": ["d7d5"],                   # Centro agresivo
+                    "g1f3": ["d7d5"],                   # Transposición
+                    "b1c3": ["d7d5"]                    # Transposición
+                },
+                "follow_up": {
+                    "c4d5 f6d5": ["e2e4"],              # Control del centro
+                    "g1f3 d7d5": ["c1g5"],              # Alfil a g5
+                    "b1c3 d7d5": ["f1d3"],              # Alfil a d3
+                },
+                "anti_theory": {
+                    "e2e3": ["d7d5"],                   # Contra Colle System
+                    "f1d3": ["b8c6"],                   # Desarrollo del caballo
+                }
+            },
+            # Holandesa
+            "alternative_holland": {
+                "mainline": ["f7f5"],
+                "responses": {
+                    "g1f3": ["g8f6"],                   # Desarrollo del caballo
+                    "d2d3": ["e7e6"],                   # Estructura sólida
+                    "c2c4": ["e7e6"]                    # Transposición
+                },
+                "follow_up": {
+                    "g1f3 g8f6": ["f1d3"],              # Alfil a d3
+                    "c2c4 e7e6": ["f1g2"],              # Alfil a g2
+                    "d2d3 e7e6": ["c1e3"],              # Alfil a e3
+                },
+                "anti_theory": {
+                    "e2e4": ["f5e4"],                   # Captura en e4
+                    "f1b5": ["c7c6"],                   # Contra fianchetto temprano
                 }
             }
         }
@@ -145,12 +205,14 @@ class ElenaBot(BaseBot):
         except:
             return False
         
-    def minimax(self, board, depth, maximizing_player):
+    def minimax(self, board, depth, maximizing_player, alpha=float('-inf'), beta=float('inf')):
         """
-        Implementación del algoritmo Minimax.
+        Implementación del algoritmo Minimax con Alpha-Beta Pruning.
         :param board: Estado actual del tablero.
         :param depth: Profundidad restante para explorar.
         :param maximizing_player: True si es el turno del jugador maximizador (nosotros), False si es el oponente.
+        :param alpha: Mejor valor encontrado para el jugador maximizador.
+        :param beta: Mejor valor encontrado para el jugador minimizador.
         :return: La mejor puntuación y el mejor movimiento.
         """
         if depth == 0 or board.is_game_over():
@@ -163,38 +225,28 @@ class ElenaBot(BaseBot):
             max_eval = float('-inf')
             for move in legal_moves:
                 board.push(move)
-                eval_score, _ = self.minimax(board, depth - 1, False)
+                eval_score, _ = self.minimax(board, depth - 1, False, alpha, beta)
                 board.pop()
                 if eval_score > max_eval:
                     max_eval = eval_score
                     best_move = move
+                alpha = max(alpha, eval_score)
+                if beta <= alpha:
+                    break  # Poda Alpha-Beta
             return max_eval, best_move
         else:
             min_eval = float('inf')
             for move in legal_moves:
                 board.push(move)
-                eval_score, _ = self.minimax(board, depth - 1, True)
+                eval_score, _ = self.minimax(board, depth - 1, True, alpha, beta)
                 board.pop()
                 if eval_score < min_eval:
                     min_eval = eval_score
                     best_move = move
+                beta = min(beta, eval_score)
+                if beta <= alpha:
+                    break  # Poda Alpha-Beta
             return min_eval, best_move
-
-    def get_move(self, board):
-        """
-        Obtiene el mejor movimiento usando Minimax.
-        """
-        # Usar el tiempo de pensamiento de la clase base
-        time.sleep(self.think_time())
-
-        # Intentar jugada de apertura
-        opening_move = self.get_opening_move(board)
-        if opening_move and opening_move in board.legal_moves:
-            return opening_move
-
-        # Aplicar Minimax para encontrar el mejor movimiento
-        _, best_move = self.minimax(board, depth=3, maximizing_player=board.turn)
-        return best_move or random.choice(list(board.legal_moves))
 
     def evaluate_position(self, board):
         """
@@ -211,7 +263,7 @@ class ElenaBot(BaseBot):
             if piece is not None:  # Verificamos que la pieza existe
                 value = self.piece_values[piece.piece_type]
 
-                # Bonificaciones posicionales (puedes ajustar esto)
+                # Bonificaciones posicionales
                 if piece.piece_type == chess.PAWN:
                     if square in [chess.D4, chess.E4, chess.D5, chess.E5]:  # Control del centro
                         value += 20
@@ -226,53 +278,31 @@ class ElenaBot(BaseBot):
             if board.is_attacked_by(chess.BLACK, square):
                 score -= 10
 
+        # Desarrollo en apertura
+        if len(board.move_stack) < 20:
+            for square in chess.SQUARES:
+                piece = board.piece_at(square)
+                if piece:
+                    if piece.piece_type in [chess.KNIGHT, chess.BISHOP]:
+                        if piece.color and square > chess.H2:
+                            score += 20
+                        elif not piece.color and square < chess.A7:
+                            score -= 20
+
         return score if board.turn else -score
 
     def get_move(self, board):
+        """
+        Obtiene el mejor movimiento usando Minimax.
+        """
         # Usar el tiempo de pensamiento de la clase base
         time.sleep(self.think_time())
-        
+
         # Intentar jugada de apertura
         opening_move = self.get_opening_move(board)
         if opening_move and opening_move in board.legal_moves:
             return opening_move
-        
-        legal_moves = list(board.legal_moves)
-        if not legal_moves:
-            return None
-        
-        best_move = None
-        best_score = float('-inf')
-        
-        for move in legal_moves:
-            board.push(move)
-            score = -self.evaluate_position(board)
-            
-            # Penalizaciones adicionales en apertura
-            if len(board.move_stack) < 20:
-                piece = board.piece_at(move.to_square)
-                if piece:
-                    # Evitar mover la misma pieza repetidamente
-                    if len(board.move_stack) >= 4:
-                        previous_moves = [board.move_stack[-i] for i in range(1, 5) if i <= len(board.move_stack)]
-                        if any(prev_move.from_square == move.from_square for prev_move in previous_moves):
-                            score -= 30
-                    
-                    # Evitar sacar la dama demasiado pronto
-                    if piece.piece_type == chess.QUEEN and len(board.move_stack) < 10:
-                        score -= 40
-                    
-                    # Priorizar desarrollo de piezas menores
-                    if piece.piece_type in [chess.KNIGHT, chess.BISHOP]:
-                        if board.turn and move.to_square > chess.H2:
-                            score += 30
-                        elif not board.turn and move.to_square < chess.A7:
-                            score += 30
-            
-            board.pop()
-            
-            if score > best_score:
-                best_score = score
-                best_move = move
-        
-        return best_move or legal_moves[0]
+
+        # Aplicar Minimax para encontrar el mejor movimiento
+        _, best_move = self.minimax(board, depth=3, maximizing_player=board.turn)
+        return best_move or random.choice(list(board.legal_moves))
