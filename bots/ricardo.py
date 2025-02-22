@@ -2,7 +2,7 @@ from .base_bot import BaseBot
 import chess
 import random
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
 
 class RicardoBot(BaseBot):
     def __init__(self):
@@ -16,14 +16,30 @@ class RicardoBot(BaseBot):
             chess.KING: 20000
         }
         self.transposition_table = {}
+        self.opening_book = {
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1": chess.Move.from_uci("e2e4"),  # 1.e4
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1": chess.Move.from_uci("e7e5"),  # 1...e5
+            "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2": chess.Move.from_uci("g1f3"),  # 2.Nf3
+            # Agrega más posiciones y movimientos aquí
+        }
 
     def get_move(self, board):
+        # Intenta obtener un movimiento de la lista de aperturas
+        opening_move = self.get_opening_move(board)
+        if opening_move:
+            return opening_move
+        
+        # Si no hay movimientos de apertura disponibles, usa el minimax
         self.nodes_evaluated = 0
         start_time = time.time()
-        max_depth = 5  # Profundidad inicial ajustada
+        max_depth = 7  # Profundidad inicial ajustada
         
         best_move = self.iterative_deepening(board, max_depth, start_time)
         return best_move or list(board.legal_moves)[0]
+
+    def get_opening_move(self, board):
+        fen = board.fen()
+        return self.opening_book.get(fen, None)
 
     def iterative_deepening(self, board, max_depth, start_time):
         best_move = None
@@ -43,22 +59,23 @@ class RicardoBot(BaseBot):
             return None, None
         board_hash = hash(str(board))
         if board_hash in self.transposition_table and self.transposition_table[board_hash][0] >= depth:
-            return self.transposition_table[board_hash][1], None
+            stored_eval, stored_move = self.transposition_table[board_hash][1:]
+            return stored_eval, stored_move
         if depth == 0 or board.is_game_over():
             evaluation = self.quiescence_search(board, alpha, beta)
-            self.transposition_table[board_hash] = (depth, evaluation)
+            self.transposition_table[board_hash] = (depth, evaluation, best_move)
             return evaluation, None
         best_move = None
         if maximizing:
             max_eval = float('-inf')
             for move in self.order_moves(board):
+                if board.is_capture(move) and not self.has_immediate_threat(board):
+                    continue  # Evitar capturas peligrosas
                 board.push(move)
                 eval, _ = self.minimax(board, depth - 1, alpha, beta, False, start_time)
                 board.pop()
-                
-                if eval is None:  # Tiempo agotado
+                if eval is None:
                     return None, None
-                    
                 if eval > max_eval:
                     max_eval = eval
                     best_move = move
@@ -106,7 +123,10 @@ class RicardoBot(BaseBot):
             return -20000 if board.turn else 20000
         if board.is_stalemate() or board.is_insufficient_material():
             return 0
+
         score = 0
+
+        # Evaluar material
         for square in chess.SQUARES:
             piece = board.piece_at(square)
             if piece:
@@ -114,10 +134,19 @@ class RicardoBot(BaseBot):
                 
                 # Bonificaciones posicionales
                 if piece.piece_type == chess.PAWN:
-                    if square in [chess.D4, chess.E4, chess.D5, chess.E5]:  # Control del centro
-                        value += 20
+                    rank = chess.square_rank(square)
+                    if piece.color == chess.WHITE:
+                        value += rank * 10  # Peones avanzados valen más
+                    else:
+                        value += (7 - rank) * 10  # Peones negros avanzados valen más
+                
+                # Centralidad
+                file = chess.square_file(square)
+                rank = chess.square_rank(square)
+                distance_to_center = abs(3.5 - file) + abs(3.5 - rank)
+                value += (7 - distance_to_center) * 5  # Piezas centrales valen más
 
-                score += value if piece.color else -value
+                score += value if piece.color == chess.WHITE else -value
 
         # Control del centro
         central_squares = [chess.D4, chess.E4, chess.D5, chess.E5]
@@ -127,16 +156,19 @@ class RicardoBot(BaseBot):
             if board.is_attacked_by(chess.BLACK, square):
                 score -= 10
 
-        # Desarrollo en apertura
-        if len(board.move_stack) < 20:
-            for square in chess.SQUARES:
-                piece = board.piece_at(square)
-                if piece:
-                    if piece.piece_type in [chess.KNIGHT, chess.BISHOP]:
-                        if piece.color and square > chess.H2:
-                            score += 20
-                        elif not piece.color and square < chess.A7:
-                            score -= 20
+        # Seguridad del rey
+        king_square = board.king(chess.WHITE)
+        if king_square:
+            score += len(board.attackers(chess.WHITE, king_square)) * 5
+            score -= len(board.attackers(chess.BLACK, king_square)) * 5
+
+        king_square = board.king(chess.BLACK)
+        if king_square:
+            score -= len(board.attackers(chess.WHITE, king_square)) * 5
+            score += len(board.attackers(chess.BLACK, king_square)) * 5
+
+        # Movilidad
+        score += len(list(board.legal_moves)) * 5 if board.turn == chess.WHITE else -len(list(board.legal_moves)) * 5
 
         return score if board.turn else -score
 
@@ -162,6 +194,12 @@ class RicardoBot(BaseBot):
         board.pop()
         
         return score
+    
+    def has_immediate_threat(self, board):
+        for move in board.legal_moves:
+            if board.gives_check(move) or board.is_capture(move):
+                return True
+        return False
 
     def order_moves(self, board):
         scored_moves = []
@@ -173,11 +211,11 @@ class RicardoBot(BaseBot):
         return [move for score, move in scored_moves]
 
     def parallel_minimax(self, board, depth, alpha, beta, maximizing, start_time):
-        with ThreadPoolExecutor() as executor:
+        with ProcessPoolExecutor() as executor:
             futures = []
             for move in self.order_moves(board):
                 board.push(move)
-                futures.append(executor.submit(self.minimax, board, depth - 1, alpha, beta, not maximizing, start_time))
+                futures.append(executor.submit(self.minimax, board.copy(), depth - 1, alpha, beta, not maximizing, start_time))
                 board.pop()
             
             best_move = None
