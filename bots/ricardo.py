@@ -55,33 +55,40 @@ class RicardoBot(BaseBot):
         return best_move
 
     def minimax(self, board, depth, alpha, beta, maximizing, start_time):
+        best_move = None 
         if time.time() - start_time > self.think_time():
             return None, None
+
         board_hash = hash(str(board))
         if board_hash in self.transposition_table and self.transposition_table[board_hash][0] >= depth:
-            stored_eval, stored_move = self.transposition_table[board_hash][1:]
-            return stored_eval, stored_move
+            return self.transposition_table[board_hash][1], self.transposition_table[board_hash][2]
+
         if depth == 0 or board.is_game_over():
             evaluation = self.quiescence_search(board, alpha, beta)
-            self.transposition_table[board_hash] = (depth, evaluation, best_move)
+            self.transposition_table[board_hash] = (depth, evaluation, best_move or None)  # Almacenar evaluación sin movimiento
             return evaluation, None
-        best_move = None
+        
+        # Manejar caso sin movimientos legales
+        if not list(board.legal_moves):
+            return self.evaluate_position(board), None
+
         if maximizing:
             max_eval = float('-inf')
             for move in self.order_moves(board):
-                if board.is_capture(move) and not self.has_immediate_threat(board):
-                    continue  # Evitar capturas peligrosas
                 board.push(move)
                 eval, _ = self.minimax(board, depth - 1, alpha, beta, False, start_time)
                 board.pop()
-                if eval is None:
+
+                if eval is None:  # Tiempo agotado
                     return None, None
+
                 if eval > max_eval:
                     max_eval = eval
                     best_move = move
                 alpha = max(alpha, eval)
                 if beta <= alpha:
                     break
+            self.transposition_table[board_hash] = (depth, max_eval, best_move)
             return max_eval, best_move
         else:
             min_eval = float('inf')
@@ -89,16 +96,17 @@ class RicardoBot(BaseBot):
                 board.push(move)
                 eval, _ = self.minimax(board, depth - 1, alpha, beta, True, start_time)
                 board.pop()
-                
+
                 if eval is None:  # Tiempo agotado
                     return None, None
-                    
+
                 if eval < min_eval:
                     min_eval = eval
                     best_move = move
                 beta = min(beta, eval)
                 if beta <= alpha:
                     break
+            self.transposition_table[board_hash] = (depth, min_eval, best_move)
             return min_eval, best_move
 
     def quiescence_search(self, board, alpha, beta):
