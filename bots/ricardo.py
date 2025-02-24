@@ -2,11 +2,13 @@ from .base_bot import BaseBot
 import chess
 import random
 import time
+import json
 from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
+from collections import defaultdict, OrderedDict
 
 class RicardoBot(BaseBot):
     def __init__(self):
-        super().__init__("Ricardo", 2000)
+        super().__init__("Ricardo",2000)
         self.piece_values = {
             chess.PAWN: 100,
             chess.KNIGHT: 320,
@@ -15,13 +17,75 @@ class RicardoBot(BaseBot):
             chess.QUEEN: 900,
             chess.KING: 20000
         }
-        self.transposition_table = {}
-        self.opening_book = {
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1": chess.Move.from_uci("e2e4"),  # 1.e4
-            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1": chess.Move.from_uci("e7e5"),  # 1...e5
-            "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2": chess.Move.from_uci("g1f3"),  # 2.Nf3
-            # Agrega más posiciones y movimientos aquí
-        }
+        self.transposition_table = LimitedSizeDict(max_size=1_000_000)
+        self.opening_book = self.load_opening_book('../static/openings.json')
+
+    def load_opening_book(self, file_path='../static/openings.json'):
+        if file_path:
+            try:
+                with open(file_path, "r") as file:
+                    openings = json.load(file)
+                    return {pos: [chess.Move.from_uci(move) for move in moves] for pos, moves in openings.items()}
+            except (FileNotFoundError, json.JSONDecodeError):
+                print("Error al cargar el libro de aperturas. Usando valores predeterminados.")
+
+        # Aperturas por defecto
+            return {
+        # Inicio del juego - Múltiples primeras jugadas posibles
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1": [
+            chess.Move.from_uci("e2e4"),  # Apertura clásica
+            chess.Move.from_uci("d2d4"),  # Gambito de Dama
+            chess.Move.from_uci("c2c4"),  # Inglesa
+            chess.Move.from_uci("g1f3"),  # Reti
+            chess.Move.from_uci("b2b3"),  # Larsen
+        ],
+
+        # Respuestas a 1.e4 (Defensas populares)
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1": [
+            chess.Move.from_uci("e7e5"),  # Defensa Abierta
+            chess.Move.from_uci("c7c5"),  # Defensa Siciliana
+            chess.Move.from_uci("e7e6"),  # Defensa Francesa
+            chess.Move.from_uci("c7c6"),  # Caro-Kann
+            chess.Move.from_uci("g8f6"),  # Defensa Alekhine
+            chess.Move.from_uci("d7d6"),  # Defensa Pirc
+        ],
+
+        # Respuestas a 1.d4 (Defensas principales)
+        "rnbqkbnr/pppppppp/8/8/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 1": [
+            chess.Move.from_uci("d7d5"),  # Defensa Ortodoxa
+            chess.Move.from_uci("g8f6"),  # Defensa India de Rey
+            chess.Move.from_uci("e7e6"),  # Defensa Francesa (transposición)
+            chess.Move.from_uci("c7c5"),  # Defensa Benoni
+            chess.Move.from_uci("f7f5"),  # Defensa Holandesa
+        ],
+
+        # Respuestas a 1.c4 (Apertura Inglesa)
+        "rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq - 0 1": [
+            chess.Move.from_uci("e7e5"),  # Variante Reversa de la Siciliana
+            chess.Move.from_uci("c7c5"),  # Defensa Siciliana Inversa
+            chess.Move.from_uci("g8f6"),  # Defensa India
+            chess.Move.from_uci("e7e6"),  # Sistema Botvinnik
+            chess.Move.from_uci("c7c6"),  # Defensa Caro-Kann (posible transposición)
+        ],
+
+        # Respuestas a 1.Nf3 (Apertura Reti)
+        "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 0 1": [
+            chess.Move.from_uci("d7d5"),  # Variante Clásica
+            chess.Move.from_uci("g8f6"),  # India de Rey
+            chess.Move.from_uci("c7c5"),  # Defensa Siciliana Inversa
+            chess.Move.from_uci("e7e6"),  # Defensa Francesa
+            chess.Move.from_uci("c7c6"),  # Defensa Caro-Kann
+        ],
+
+        # Después de 1.e4 e5 2.Nf3 (Posibilidades negras)
+        "rnbqkbnr/pppppppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 2": [
+            chess.Move.from_uci("b8c6"),  # Defensa Española
+            chess.Move.from_uci("g8f6"),  # Defensa Petrov
+            chess.Move.from_uci("d7d6"),  # Defensa Philidor
+            chess.Move.from_uci("f7f5"),  # Defensa Letona
+            chess.Move.from_uci("c7c6"),  # Variante Caro-Kann
+        ]
+    }
 
     def get_move(self, board):
         # Intenta obtener un movimiento de la lista de aperturas
@@ -43,15 +107,12 @@ class RicardoBot(BaseBot):
 
     def iterative_deepening(self, board, max_depth, start_time):
         best_move = None
-        
         for depth in range(1, max_depth + 1):
             if time.time() - start_time > self.think_time():
                 break
-                
             value, move = self.minimax(board, depth, float('-inf'), float('inf'), True, start_time)
             if move:
                 best_move = move
-                
         return best_move
 
     def minimax(self, board, depth, alpha, beta, maximizing, start_time):
@@ -178,24 +239,53 @@ class RicardoBot(BaseBot):
         # Movilidad
         score += len(list(board.legal_moves)) * 5 if board.turn == chess.WHITE else -len(list(board.legal_moves)) * 5
 
+        # Penaliazción --
+        # Penalizar peones doblados
+        for color in [chess.WHITE, chess.BLACK]:
+            doubled_pawns = 0
+            for file in range(8):
+                pawns_in_file = len([pawn for pawn in board.pieces(chess.PAWN, color) if chess.square_file(pawn) == file])
+                if pawns_in_file > 1:
+                    doubled_pawns += pawns_in_file - 1
+            score += (-doubled_pawns * 50) if color == chess.WHITE else (doubled_pawns * 50)
+        
+        # Bonificación ++
+        # Control de columnas abiertas con las torres
+
+        for color in [chess.WHITE, chess.BLACK]:
+            for file in range(8):
+                if not any(board.piece_at(chess.square(rank, file)) for rank in range(8)):
+                    rooks = board.pieces(chess.ROOK, color)
+                    for rook in rooks:
+                        if chess.square_file(rook) == file:
+                            score += 30 if color == chess.WHITE else -30
+
+         # Desarrollo de piezas
+        developed_pieces = len([piece for piece in board.piece_map().values() if piece.piece_type in [chess.KNIGHT, chess.BISHOP]])
+        score += developed_pieces * 20 if board.turn == chess.WHITE else -developed_pieces * 20
+
         return score if board.turn else -score
 
     def score_move(self, board, move):
         score = 0
         
+        # Capturas tácticas
         if board.is_capture(move):
             capturing_piece = board.piece_at(move.from_square)
             captured_piece = board.piece_at(move.to_square)
             if captured_piece:
                 score += 10000 + self.piece_values[captured_piece.piece_type] - (self.piece_values[capturing_piece.piece_type] / 10)
         
+        # Promociones
         if move.promotion:
             score += 9000 + self.piece_values[move.promotion]
-            
+        
+        # Centralidad
         to_rank, to_file = chess.square_rank(move.to_square), chess.square_file(move.to_square)
         center_distance = abs(3.5 - to_rank) + abs(3.5 - to_file)
         score += (4 - center_distance) * 10
         
+        # Movimientos que dan jaque
         board.push(move)
         if board.is_check():
             score += 500
@@ -219,7 +309,7 @@ class RicardoBot(BaseBot):
         return [move for score, move in scored_moves]
 
     def parallel_minimax(self, board, depth, alpha, beta, maximizing, start_time):
-        with ProcessPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:  # Ajusta el número de hilos según tu CPU
             futures = []
             for move in self.order_moves(board):
                 board.push(move)
@@ -239,3 +329,13 @@ class RicardoBot(BaseBot):
                     best_value = eval
                     best_move = move
             return best_value, best_move
+        
+class LimitedSizeDict(OrderedDict):
+    def __init__(self, *args, max_size=1000000, **kwargs):
+        self.max_size = max_size
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        if len(self) > self.max_size:
+            self.popitem(last=False)
